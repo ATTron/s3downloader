@@ -35,6 +35,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	if uri != "" {
+		if _, err := os.Stat(uri); os.IsNotExist(err) {
+			os.MkdirAll(uri, os.ModePerm)
+		}
+	}
+
 	item := uri
 
 	sess = session.Must(session.NewSession(&aws.Config{
@@ -107,9 +113,10 @@ func join(strs ...string) string {
 func worker(id int, files <-chan string, finished chan<- bool) {
 	for f := range files {
 		if string(f[len(f)-1:]) != "/" {
-			log.Println("attempting download:", f)
+			// log.Println("attempting download:", f)
 			downloadFile(f)
 		} else {
+			// making sure we didnt miss anything
 			if _, err := os.Stat(f); os.IsNotExist(err) {
 				os.MkdirAll(f, os.ModePerm)
 			}
