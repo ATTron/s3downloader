@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -112,14 +113,15 @@ func join(strs ...string) string {
 
 func worker(id int, files <-chan string, finished chan<- bool) {
 	for f := range files {
-		if string(f[len(f)-1:]) != "/" {
-			// log.Println("attempting download:", f)
-			downloadFile(f)
+		if info, err := os.Stat(f); err == nil {
+			if !info.IsDir() {
+				downloadFile(f)
+			}
 		} else {
 			// making sure we didnt miss anything
-			if _, err := os.Stat(f); os.IsNotExist(err) {
-				os.MkdirAll(f, os.ModePerm)
-			}
+			dir, _ := filepath.Split(f)
+			os.MkdirAll(dir, os.ModePerm)
+			downloadFile(f)
 		}
 		finished <- true
 	}
