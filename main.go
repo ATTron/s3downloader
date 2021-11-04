@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var bucket = ""
@@ -36,6 +37,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMicro
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006-01-02T15:04:05.000-700"})
+
 	if uri != "" {
 		if _, err := os.Stat(uri); os.IsNotExist(err) {
 			os.MkdirAll(uri, os.ModePerm)
@@ -54,7 +58,7 @@ func main() {
 		Prefix: aws.String(item),
 	})
 	if err != nil {
-		log.Fatalf("Error getting bucket:\n%v\n", err)
+		log.Fatal().Msgf("Error getting bucket:\n%v\n", err)
 	}
 	// setup concurrency -- but limited to certain number so we don't choke CPU
 	finished := make(chan bool)
@@ -84,7 +88,7 @@ func main() {
 func downloadFile(file string) {
 	f, err := os.Create(file)
 	if err != nil {
-		log.Fatalf("Cannot open file: %v, %v", file, err)
+		log.Fatal().Msgf("Cannot open file: %v, %v", file, err)
 	}
 
 	defer f.Close()
@@ -96,10 +100,10 @@ func downloadFile(file string) {
 			Key:    aws.String(file),
 		})
 	if err != nil {
-		log.Fatalf("Unable to download file %v, %v", file, err)
+		log.Fatal().Msgf("Unable to download file %v, %v", file, err)
 	}
 
-	log.Println(f.Name(), "successfully downloaded with", numBytes, "bytes")
+	log.Info().Msgf("%s successfully downloaded with %d bytes", f.Name(), numBytes)
 }
 
 func join(strs ...string) string {
